@@ -1,4 +1,4 @@
-	import { TAbstractFile, FuzzySuggestModal, App, TFolder, Editor, ItemView, MarkdownView, Modal, Notice, Plugin, TFile, Vault, PluginSettingTab, Setting } from 'obsidian';
+	import { TAbstractFile, FuzzySuggestModal, App, TFolder, Editor, ItemView, MarkdownView, Modal, Notice, Plugin, TFile, Vault, PluginSettingTab, Setting, FuzzyMatch } from 'obsidian';
 	// Importing the canvas library
 	import * as fs from 'fs';
 import * as path from 'path';
@@ -6,19 +6,19 @@ import { join } from 'path';
 
 
 
-	interface CanvasUtilitiesSettings {
+	interface CanvasTempleSettings {
 		canvasTemplatesFolder: string,
 		debug: boolean
 	}
 
-	const DEFAULT_SETTINGS: CanvasUtilitiesSettings = {
+	const DEFAULT_SETTINGS: CanvasTempleSettings = {
 		canvasTemplatesFolder: 'default',
 		debug: false
 	}
 
 
-	export default class CanvasUtilities extends Plugin {
-		settings: CanvasUtilitiesSettings;
+	export default class CanvasTemple extends Plugin {
+		settings: CanvasTempleSettings;
 		async onload() {
 			await this.loadSettings();
 
@@ -33,38 +33,10 @@ import { join } from 'path';
 					const newPageId = generateRandomId();
 
 					// modal
-					// new TemplateModal(this.settings.canvasTemplatesFolder, plugin: CanvasUtilities).open();
-					
-					if(activeFile) {
-						// get the file path
-						console.log("Active file path: " + activeFile);
-						const content = await this.app.vault.read(activeFile);
-						console.log(content);
-						// parse the file contents with parseCanvasFile
-						const canvasData: CanvasData = JSON.parse(content);
-						// print the canvas data to the console
-						CanvasToConsole(canvasData);
-						const newPage: CanvasFileData = {
-							id: newPageId,
-							file: 'Untitled.md',
-							height: 200,
-							type: 'file',
-							width: 200,
-							x: 0,
-							y: 0,
-						}
+					new TemplateModal(this).open();
 
-
-					// Add a page to the Canvas Object
-					canvasData.nodes.push(newPage);
-					this.app.vault.modify(activeFile, JSON.stringify(canvasData));
-					}else{ 
-						// if there is no active file, print an error to the console
-						console.log("No active file");
-					}
-				}
-			});
-			this.addSettingTab(new CanvasUtilitiesSettings(this.app, this));
+			}});
+			this.addSettingTab(new CanvasTempleSettings(this.app, this));
 			// Function to print a Canvas object to the console
 			function CanvasToConsole(Canvas: CanvasData): void {
 				console.log(Canvas);
@@ -86,84 +58,137 @@ import { join } from 'path';
 
 	// Function to insert a canvas file into the active file
 	async function insertCanvasFile(mainCanvasFile: TFile,canvasFile: TFile): Promise<void> {
-		if(this.app.settings.debug) {
 			console.log("Inserting canvas file into active file");
-		}
-		if(this.app.settings.debug) {
 			console.log("Active file: " + mainCanvasFile);
 			console.log("Canvas file: " + canvasFile);
-		}
 		// Reading the contents of the files
 		const mainContent = await this.app.vault.read(mainCanvasFile);
 		const canvasContent = await this.app.vault.read(canvasFile);
-		if(this.app.settings.debug) {
 			console.log("Main file contents: " + mainContent);
 			console.log("Canvas file contents: " + canvasContent);
-		}
 		// Parsing the contents of the files and creating a CanvasData object for each
 		const mainCanvasData: CanvasData = JSON.parse(mainContent);
 		const canvasData: CanvasData = JSON.parse(canvasContent);
-		if(this.app.settings.debug) {
 			console.log("Main canvas data: " + mainCanvasData);
 			console.log("Canvas data: " + canvasData);
+
+		let fromNodeid: string[] = [];
+		let toNodeid: string[] = [];
+		let fomSideDirection: string[] = [];
+		let toSideDirection: string[] = [];
+		// For each edge in the canvas file add the fromNodeid and toNodeid and the fromSideDirection and toSideDirection to the arrays
+		for(let i = 0; i < canvasData.edges.length; i++) {
+			fromNodeid.push(canvasData.edges[i].fromNode);
+			toNodeid.push(canvasData.edges[i].toNode);
+			fomSideDirection.push(canvasData.edges[i].fromSide);
+			toSideDirection.push(canvasData.edges[i].toSide);
 		}
+
 		// Adding the nodes from the canvas file to the main canvas file
+		// Checking if the node already exists in the main canvas file using the id
 		for(let i = 0; i < canvasData.nodes.length; i++) {
-			mainCanvasData.nodes.push(canvasData.nodes[i]);
-			if(this.app.settings.debug) {
-				console.log("Pushing node: " + canvasData.nodes[i]);
+			for(let j = 0; j < mainCanvasData.nodes.length; j++) {
+				while(canvasData.nodes[i].id == mainCanvasData.nodes[j].id) {
+					// for each egde in the canvas file check if the fromNodeid or toNodeid is the same as the id of the node
+					for(let k = 0; k < canvasData.edges.length; k++) {
+						if(canvasData.edges[k].fromNode == canvasData.nodes[i].id) {
+							// if the fromNodeid is the same as the id of the node then change the fromNodeid to the id of the node newly created randomly
+							console.log("Changing id of node: " + canvasData.nodes[i].id)
+							canvasData.nodes[i].id = generateRandomId();
+							console.log("New id: " + canvasData.nodes[i].id);
+							canvasData.edges[k].fromNode = canvasData.nodes[i].id;
+						}else if(canvasData.edges[k].toNode == canvasData.nodes[i].id) {
+							// if the toNodeid is the same as the id of the node then change the toNodeid to the id of the node newly created randomly
+							console.log("Changing id of node: " + canvasData.nodes[i].id)
+							canvasData.nodes[i].id = generateRandomId();
+							console.log("New id: " + canvasData.nodes[i].id);
+							canvasData.edges[k].toNode = canvasData.nodes[i].id;
+						}else{
+							console.log("Changing id of node: " + canvasData.nodes[i].id)
+							canvasData.nodes[i].id = generateRandomId();
+							console.log("New id: " + canvasData.nodes[i].id);
+						}
+					}
+				}
+
+			}
+		}
+		// Checking if the edge already exists in the main canvas file using the id
+		for(let i = 0; i < canvasData.edges.length; i++) {
+			for(let j = 0; j < mainCanvasData.edges.length; j++) {
+				while(canvasData.edges[i].id == mainCanvasData.edges[j].id) {
+					console.log("Changing id of edge: " + canvasData.edges[i].id)
+					canvasData.edges[i].id = generateRandomId();
+					console.log("New id: " + canvasData.edges[i].id);
+				}
+			}
+		}
+		for(let i = 0; i < canvasData.edges.length; i++) {
+			if(canvasData.edges[i]){
+
+				mainCanvasData.edges.push(canvasData.edges[i]);
+				console.log("Pushing edge: " + canvasData.edges[i]);
+			}
+		}
+		for(let i = 0; i < canvasData.nodes.length; i++) {
+			if(canvasData.nodes[i]){
+				mainCanvasData.nodes.push(canvasData.nodes[i]);
+			console.log("Pushing node: " + canvasData.nodes[i]);
 			}
 		}
 		// Adding the changes back to the main Canvas File
+		console.log("Writing to file: " + mainCanvasFile.toString());
 		this.app.vault.modify(mainCanvasFile, JSON.stringify(mainCanvasData));
 	}
 
 	class TemplateModal extends FuzzySuggestModal<TFile> {
-		plugin: CanvasUtilities;
+		plugin: CanvasTemple;
 		selectedTemplate: string;
 		private creation_folder: TFolder | undefined;
 
-		constructor(app: App, plugin: CanvasUtilities) {
+		constructor(plugin: CanvasTemple) {
 			super(app);
 			this.plugin = plugin;
 			this.setPlaceholder("Type name of a canvas template...")
 		}
 
-		getCItems(): TFile[] {
+		getItems(): TFile[] {
 			if(!this.plugin.settings.canvasTemplatesFolder) {
 				return app.vault.getMarkdownFiles();
 			}
+			console.log("Getting items from folder: " + this.plugin.settings.canvasTemplatesFolder);
 			const files = get_ctfiles_from_folder(this.plugin.settings.canvasTemplatesFolder);
 				if(!files) {
+					console.log("files returned null")
 					return [];
 				}
 				return files;
-			}
-
-			getItemText(item: TFile): string {
-				return item.basename;
-			}
+		}
+		getItemText(item: TFile): string {
+			return item.basename;
+		}
 
 			onChooseItem(item: TFile | KeyboardEvent): void {
-				insertCanvasFile(this.app.workspace.getActiveFile(), item);
+				if(this.app.workspace.getActiveFile()){
+					insertCanvasFile(this.plugin.app.workspace.getActiveFile(), item);
+				}else{ 
+					new Notice("No active file or improper view mode.");
+				}
 			}
 
-				
-
-		onOpen() {
-			const {contentEl} = this;
-			contentEl.setText("jdslafj")
-		}
-		onClose(): void {
-			const {contentEl} = this;
-			contentEl.empty();
-		}
+			start(): void { 
+				try { 
+					this.open();
+				} catch (error) {
+					new Notice("No active file or improper view mode.");
+				}
+			}
 	}
 
 
-	class CanvasUtilitiesSettings extends PluginSettingTab {
-		plugin: CanvasUtilities;
-		constructor(app: App, plugin: CanvasUtilities) {
+	class CanvasTempleSettings extends PluginSettingTab {
+		plugin: CanvasTemple;
+		constructor(app: App, plugin: CanvasTemple) {
 			super(app, plugin);
 			this.plugin = plugin;
 		}
@@ -181,6 +206,17 @@ import { join } from 'path';
 						this.plugin.settings.canvasTemplatesFolder = value;
 						await this.plugin.saveSettings();
 					}));
+			new Setting(containerEl)
+				.setName('Debug')
+				.setDesc('Enable debug mode.')
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.debug)
+					.onChange(async (value) => {
+						this.plugin.settings.debug = value;
+						await this.plugin.saveSettings();
+					}
+				));
+
 		}
 	}
 
@@ -203,9 +239,10 @@ export function resolve_ctfolder(folder_str: string): TFolder {
     if (!folder) {
 		console.log("folder not found");
     }
-    if (!(folder instanceof TFolder)) {
-		console.log("folder is a file, not a folder");
-    }
+
+    // if (!(folder instanceof TFolder)) {
+	// 	console.log("folder is a file, not a folder");
+    // }
     return folder;
 }
 export function get_ctfiles_from_folder(folder_str: string): Array<TFile> {

@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-canvas-plugin",
+	"name": "obsidian-canvas-temple-plugin",
 	"version": "0.0.1",
-	"description": "This is a sample plugin for creating plugins that use the canvas core plugin in obsidian.",
+	"description": "This i`s a sample plugin for creating plugins that use the canvas core plugin in obsidian.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
