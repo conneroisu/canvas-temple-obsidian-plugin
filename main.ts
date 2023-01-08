@@ -3,6 +3,7 @@
 	import * as fs from 'fs';
 import * as path from 'path';
 import { join } from 'path';
+import { CanvasEdgeData } from 'src/canvas';
 
 
 
@@ -21,26 +22,21 @@ import { join } from 'path';
 		settings: CanvasTempleSettings;
 		async onload() {
 			await this.loadSettings();
-
-			// This adds a simple command that can be triggered anywhere
 			this.addCommand({
 				id: 'open-canvas-template-modal',
 				name: 'Open Canvas Template Modal',
-				callback: async () => {
-					// get the active file
-					const activeFile = this.app.workspace.getActiveFile();
-					// generate an id for the new page similar to 'aba082f3296f476f'
-					const newPageId = generateRandomId();
-
-					// modal
-					new TemplateModal(this).open();
-
-			}});
+				checkCallback: (checking: boolean) => {
+					const active = this.app.workspace.getActiveFile();
+					if(active && active.extension == 'canvas') {
+						if(!checking) {
+						
+							new TemplateModal(this).open();
+						}
+						return true;
+					}
+				}
+			});
 			this.addSettingTab(new CanvasTempleSettings(this.app, this));
-			// Function to print a Canvas object to the console
-			function CanvasToConsole(Canvas: CanvasData): void {
-				console.log(Canvas);
-			}
 		}
 		async onunload(): Promise<void> {
 			console.log('unloading plugin');
@@ -51,95 +47,127 @@ import { join } from 'path';
 		async saveSettings() {
 			await this.saveData(this.settings);
 		}
-
-
-
 	}
-
-	// Function to insert a canvas file into the active file
-	async function insertCanvasFile(mainCanvasFile: TFile,canvasFile: TFile): Promise<void> {
-			console.log("Inserting canvas file into active file");
-			console.log("Active file: " + mainCanvasFile);
-			console.log("Canvas file: " + canvasFile);
-		// Reading the contents of the files
-		const mainContent = await this.app.vault.read(mainCanvasFile);
-		const canvasContent = await this.app.vault.read(canvasFile);
-			console.log("Main file contents: " + mainContent);
-			console.log("Canvas file contents: " + canvasContent);
-		// Parsing the contents of the files and creating a CanvasData object for each
-		const mainCanvasData: CanvasData = JSON.parse(mainContent);
-		const canvasData: CanvasData = JSON.parse(canvasContent);
-			console.log("Main canvas data: " + mainCanvasData);
-			console.log("Canvas data: " + canvasData);
-
-		let fromNodeid: string[] = [];
-		let toNodeid: string[] = [];
-		let fomSideDirection: string[] = [];
-		let toSideDirection: string[] = [];
-		// For each edge in the canvas file add the fromNodeid and toNodeid and the fromSideDirection and toSideDirection to the arrays
-		for(let i = 0; i < canvasData.edges.length; i++) {
-			fromNodeid.push(canvasData.edges[i].fromNode);
-			toNodeid.push(canvasData.edges[i].toNode);
-			fomSideDirection.push(canvasData.edges[i].fromSide);
-			toSideDirection.push(canvasData.edges[i].toSide);
-		}
-
-		// Adding the nodes from the canvas file to the main canvas file
-		// Checking if the node already exists in the main canvas file using the id
-		for(let i = 0; i < canvasData.nodes.length; i++) {
-			for(let j = 0; j < mainCanvasData.nodes.length; j++) {
-				while(canvasData.nodes[i].id == mainCanvasData.nodes[j].id) {
-					// for each egde in the canvas file check if the fromNodeid or toNodeid is the same as the id of the node
-					for(let k = 0; k < canvasData.edges.length; k++) {
-						if(canvasData.edges[k].fromNode == canvasData.nodes[i].id) {
-							// if the fromNodeid is the same as the id of the node then change the fromNodeid to the id of the node newly created randomly
-							console.log("Changing id of node: " + canvasData.nodes[i].id)
-							canvasData.nodes[i].id = generateRandomId();
-							console.log("New id: " + canvasData.nodes[i].id);
-							canvasData.edges[k].fromNode = canvasData.nodes[i].id;
-						}else if(canvasData.edges[k].toNode == canvasData.nodes[i].id) {
-							// if the toNodeid is the same as the id of the node then change the toNodeid to the id of the node newly created randomly
-							console.log("Changing id of node: " + canvasData.nodes[i].id)
-							canvasData.nodes[i].id = generateRandomId();
-							console.log("New id: " + canvasData.nodes[i].id);
-							canvasData.edges[k].toNode = canvasData.nodes[i].id;
-						}else{
-							console.log("Changing id of node: " + canvasData.nodes[i].id)
-							canvasData.nodes[i].id = generateRandomId();
-							console.log("New id: " + canvasData.nodes[i].id);
-						}
-					}
-				}
-
+	function isToNodeIdMatching(edges: CanvasEdgeData[], nodeId: string): number {
+		for(let i = 0; i < edges.length; i++) {
+			if(edges[i].toNode == nodeId) {
+				return i;
 			}
 		}
-		// Checking if the edge already exists in the main canvas file using the id
-		for(let i = 0; i < canvasData.edges.length; i++) {
-			for(let j = 0; j < mainCanvasData.edges.length; j++) {
-				while(canvasData.edges[i].id == mainCanvasData.edges[j].id) {
-					console.log("Changing id of edge: " + canvasData.edges[i].id)
-					canvasData.edges[i].id = generateRandomId();
-					console.log("New id: " + canvasData.edges[i].id);
+		return -1;
+	}
+	function isFromNodeIdMatching(edges: CanvasEdgeData[], nodeId: string): number {
+		for(let i = 0; i < edges.length; i++) {
+			if(edges[i].fromNode == nodeId) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	//function to udate the canvasData nodes and edges with the new ids of the nodes and edges using generateRandomId()
+	function updateCanvasData(canvasData: CanvasData, ): CanvasData {
+		// Randomizing the node ids and edge ids
+		// using matching methods to check if the node id is also in the edges
+		for(let i = 0; i < canvasData.nodes.length; i++) {
+			if(canvasData.nodes[i]){
+				const newId = generateRandomId();
+				const oldId = canvasData.nodes[i].id;
+				canvasData.nodes[i].id = newId;
+				const toNodeIndex = isToNodeIdMatching(canvasData.edges, oldId);
+				const fromNodeIndex = isFromNodeIdMatching(canvasData.edges, oldId);
+				if(toNodeIndex != -1) {
+					canvasData.edges[toNodeIndex].toNode = newId;
+				}else if(fromNodeIndex != -1) {
+					canvasData.edges[fromNodeIndex].fromNode = newId;
+				}else{
+					canvasData.nodes[i].id = oldId;
 				}
 			}
 		}
 		for(let i = 0; i < canvasData.edges.length; i++) {
 			if(canvasData.edges[i]){
+				canvasData.edges[i].id = generateRandomId();
+			}
+		}
+		return canvasData;
+	}
 
-				mainCanvasData.edges.push(canvasData.edges[i]);
-				console.log("Pushing edge: " + canvasData.edges[i]);
+
+		
+
+
+	// Function to insert a canvas file into the active file
+	async function insertCanvasFile(mainCanvasFile: TFile,canvasFile: TFile): Promise<void> {
+		// Reading the contents of the files
+		const mainContent = await this.app.vault.read(mainCanvasFile);
+		const canvasContent = await this.app.vault.read(canvasFile);
+		// Parsing the contents of the files and creating a CanvasData object for each
+		const mainCanvasData: CanvasData = JSON.parse(mainContent);
+		let canvasData: CanvasData = JSON.parse(canvasContent);
+		console.log("Number of edges in canvas file: " + canvasData.edges.length);
+
+		canvasData = updateCanvasData(canvasData);
+
+
+		for(let i = 0; i < canvasData.edges.length; i++) {
+			if(canvasData.edges[i]){
+				
+				console.log("Number of edges in main canvas file now: " + mainCanvasData.edges.length);
+				console.log("Pushing edge: " + canvasData.edges[i].toString());
+				const num = mainCanvasData.edges.push(canvasData.edges[i]);
+				console.log("Number of edges in main canvas file now: " + num);
 			}
 		}
 		for(let i = 0; i < canvasData.nodes.length; i++) {
 			if(canvasData.nodes[i]){
 				mainCanvasData.nodes.push(canvasData.nodes[i]);
-			console.log("Pushing node: " + canvasData.nodes[i]);
+				console.log("Pushing node: " + canvasData.nodes[i]);
 			}
 		}
 		// Adding the changes back to the main Canvas File
-		console.log("Writing to file: " + mainCanvasFile.toString());
-		this.app.vault.modify(mainCanvasFile, JSON.stringify(mainCanvasData));
+		console.log(getCanvasFileJsonString(mainCanvasData));
+		this.app.vault.modify(mainCanvasFile, getCanvasFileJsonString(mainCanvasData));
 	}
+	// function to check if the given node id is already in the main canvas file
+	function checkNodeIdNotMain(mainCanvasData: CanvasData, nodeId: string) {
+		for(let i = 0; i < mainCanvasData.nodes.length; i++) {
+			if(mainCanvasData.nodes[i].id == nodeId) {
+				return true;
+			}
+		}
+		return false;
+	}
+	// function to return a properly formatted json string for the canvas file example seen below from a json
+	// 	{
+	// 	"nodes":[
+	// 		{"id":"e7a47ad7bd0b34c4","x":-368,"y":-316,"width":399,"height":265,"type":"file","file":"Rainbow Ames Camponile.jpg"},
+	// 		{"id":"562fbaa5d17165e4","x":65,"y":-316,"width":409,"height":60,"type":"text","text":"# Main Ideas"},
+	// 	],
+	// 	"edges":[
+	// 		{"id":"Vqng34oEJUNaTyyQ","fromNode":"SWbCGAfhwICSTeLc","fromSide":"right","toNode":"Txmd3sxPcQs1qWqS","toSide":"left"},
+	// 		{"id":"TJWhbRHUDBzAKJgR","fromNode":"OoSnxYlnLaTomYTc","fromSide":"right","toNode":"kSfOmEVsE8p6cY0P","toSide":"left"}
+	// 	]
+	// }
+		function getCanvasFileJsonString(canvasData: CanvasData): string {
+			const jsonString = JSON.stringify(canvasData);
+			// new lines after each opening bracket "["
+			const newJsonString = jsonString.replace(/\[/g, "[\n");
+			// new lines after each closing bracket "]" 
+			const newJsonString2 = newJsonString.replace(/\]/g, "\n]");
+			// new lines before "],"
+			const newJsonString3 = newJsonString2.replace(/\],/g, "\n],");
+			// new lines after a bracket + comma "},"
+			const newJsonString4 = newJsonString3.replace(/\},/g, "},\n");
+			
+		
+			return newJsonString4;
+		}
+
+
+
+
+
 
 	class TemplateModal extends FuzzySuggestModal<TFile> {
 		plugin: CanvasTemple;
@@ -148,6 +176,7 @@ import { join } from 'path';
 
 		constructor(plugin: CanvasTemple) {
 			super(app);
+
 			this.plugin = plugin;
 			this.setPlaceholder("Type name of a canvas template...")
 		}
@@ -169,8 +198,9 @@ import { join } from 'path';
 		}
 
 			onChooseItem(item: TFile | KeyboardEvent): void {
-				if(this.app.workspace.getActiveFile()){
-					insertCanvasFile(this.plugin.app.workspace.getActiveFile(), item);
+				const activestate = this.app.workspace.getActiveFile();
+				if(activestate){
+					insertCanvasFile(activestate, item);
 				}else{ 
 					new Notice("No active file or improper view mode.");
 				}

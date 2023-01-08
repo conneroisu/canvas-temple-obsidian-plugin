@@ -1,100 +1,102 @@
 ---
-created: 2022-12-31T16:14:29-06:00
-updated: 2022-12-31T16:14:29-06:00
+created: 2022-12-31T14:29:38-06:00
+updated: 2022-12-31T15:14:27-06:00
 ---
-# Obsidian Canvas Utilities Sample Plugin
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+Obsidian recently released a new core plugin called "canvas" which allows for the user to place Notes, Headers, and Media anywhere in a basically infinite, easily  location. Though a great update and addition I am sure will reignite many plugin developers, I found that I wanted templates to stop repeative work or even create a canvas that houses all your daily notes/canvases.This plugin is aimed to be the ultimate solution to this and many other problems.  The plugin is designed to allow users to quickly and easily create usable templates with which they can quickly and easily populate their canvases with. Allowing for custom notes, headers, media, and more to be placed with one action. 
 
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
+The plugin also allows for the user to customize their canvas in a variety of ways, allowing for the user to tailor their canvas to their specific needs. This includes the ability to add custom backgrounds and colors, as well as being able to adjust the size of each note or header within the template by accessing the canvas used as a template.
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Changes the default font color to red using `styles.css`.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
 
-## First time developing plugins?
+ 
+# Big Milestones
+- [ ] Inserting a canvas into an existing canvas
+- [ ] Templates Folder
+- [ ] Template Modal for Insertion
+- [ ] Template Insertion Variables
+	- [ ] Time Variables
+	- [ ] Location Variables
+	- [ ] Part of Group Variables
 
-Quick starting guide for new plugin devs:
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+# Insertion Location 
+The template is inserted at the location of the Template Header if using because of offering an alternative to the mouse cursor.
 
-## Releasing new releases
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+- [ ] Default Location Picked
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## (Obsidian Canvas Constants Resource for Developers)[ https://github.com/obsidianmd/obsidian-api/blob/master/canvas.d.ts] 
 
-## Adding your plugin to the community plugin list
+```typescript
+// A color used to encode color data for nodes and edges
+// can be a number (like "1") representing one of the (currently 6) supported colors.
+// or can be a custom color using the hex format "#FFFFFFF".
+export type CanvasColor = string;
 
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+// The overall canvas file's JSON
+export interface CanvasData {
+    nodes: AllCanvasNodeData[];
+    edges: CanvasEdgeData[];
+}
 
-## How to use
+// A node
+export interface CanvasNodeData {
+    // The unique ID for this node
+    id: string;
+    // The positional data
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    // The color of this node
+    color?: CanvasColor;
+}
 
-- Clone this repo.
-- `npm i` or `yarn` to install dependencies
-- `npm run dev` to start compilation in watch mode.
+export type AllCanvasNodeData = CanvasFileData | CanvasTextData | CanvasLinkData | CanvasGroupData;
 
-## Manually installing the plugin
+// A node that is a file, where the file is located somewhere in the vault.
+export interface CanvasFileData extends CanvasNodeData {
+    type: 'file';
+    file: string;
+    // An optional subpath which links to a heading or a block. Always starts with a `#`.
+    subpath?: string;
+}
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+// A node that is plaintext.
+export interface CanvasTextData extends CanvasNodeData {
+    type: 'text';
+    text: string;
+}
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+// A node that is an external resource.
+export interface CanvasLinkData extends CanvasNodeData {
+    type: 'link';
+    url: string;
+}
 
-## Funding URL
+// A node that represents a group.
+export interface CanvasGroupData extends CanvasNodeData {
+    type: 'group';
+    label?: string;
+}
 
-You can include funding URLs where people who use your plugin can financially support it.
+// The side of the node that a connection is connected to
+export type NodeSide = 'top' | 'right' | 'bottom' | 'left';
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
+// An edge
+export interface CanvasEdgeData {
+    // The unique ID for this edge
+    id: string;
+    // The node ID and side where this edge starts
+    fromNode: string;
+    fromSide: NodeSide;
+    // The node ID and side where this edge ends
+    toNode: string;
+    toSide: NodeSide;
+    // The color of this edge
+    color?: CanvasColor;
+    // The text label of this edge, if available
+    label?: string;
 }
 ```
-
-If you have multiple URLs, you can also do:
-
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
-
-## API Documentation
-
-See https://github.com/obsidianmd/obsidian-api
