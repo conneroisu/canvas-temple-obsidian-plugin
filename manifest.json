@@ -1,0 +1,11 @@
+{
+	"id": "obsidian-sample-canvas-plugin",
+	"name": "Sample Canvas Plugin",
+	"version": "0.0.1",
+	"minAppVersion": "0.15.0",
+	"description": "This is a sample plugin for Obsidian intended for Canvas Operating Plugins. This plugin demonstrates some of the capabilities of the Obsidian API.",
+	"author": "Conner Ohnesorge",
+	"authorUrl": "https://conneroisu.github.io/Conner-Ohnesorges-Brain",
+	"fundingUrl": "https://ko-fi.com/connero",
+	"isDesktopOnly": false
+}
