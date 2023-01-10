@@ -11,9 +11,9 @@ The plugin also allows for the user to customize their canvas in a variety of wa
 
  
 # Big Milestones
-- [ ] Inserting a canvas into an existing canvas
-- [ ] Templates Folder
-- [ ] Template Modal for Insertion
+- [x] Inserting a canvas into an existing canvas
+- [x] Templates Folder
+- [x] Template Modal for Insertion
 - [ ] Template Insertion Variables
 	- [ ] Time Variables
 	- [ ] Location Variables
