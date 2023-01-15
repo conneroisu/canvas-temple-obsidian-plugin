@@ -3,8 +3,10 @@ created: 2022-12-31T14:29:38-06:00
 updated: 2022-12-31T15:14:27-06:00
 ---
 
+# Background
 Obsidian recently released a new core plugin called "canvas" which allows for the user to place Notes, Headers, and Media anywhere in a basically infinite, easily  location. Though a great update and addition I am sure will reignite many plugin developers, I found that I wanted templates to stop repeative work or even create a canvas that houses all your daily notes/canvases.This plugin is aimed to be the ultimate solution to this and many other problems.  The plugin is designed to allow users to quickly and easily create usable templates with which they can quickly and easily populate their canvases with. Allowing for custom notes, headers, media, and more to be placed with one action. 
 
+# Utility within Canvas
 The plugin also allows for the user to customize their canvas in a variety of ways, allowing for the user to tailor their canvas to their specific needs. This includes the ability to add custom backgrounds and colors, as well as being able to adjust the size of each note or header within the template by accessing the canvas used as a template.
 
 
@@ -25,6 +27,8 @@ The template is inserted at the location of the Template Header if using because
 
 
 - [ ] Default Location Picked
+# About Contributors
+[Sponsor](https://www.kofi.com/conneroisu)
 
 ## (Obsidian Canvas Constants Resource for Developers)[ https://github.com/obsidianmd/obsidian-api/blob/master/canvas.d.ts] 
 
