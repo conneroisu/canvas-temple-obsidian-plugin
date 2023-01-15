@@ -2,6 +2,9 @@ import { ItemView, MarkdownView, Plugin, TFile } from 'obsidian';
 
 import { CanvasData } from './canvas/canvas';
 import { CanvasTempleSettings, DEFAULT_SETTINGS } from './CanvasTempleSettings';
+import { getListOfIds } from './getListOfIds';
+import { CurrentCanvasLocationX } from './insert location/CurrentCanvasLocationX';
+import { CurrentCanvasLocationY } from './insert location/CurrentCanvasLocationY';
 import { TemplateModal } from './TemplateModal';
 import { generateRandomIdAvoidingCollisions } from './utils/generateRandomIdAvoidingCollisions';
 
@@ -39,10 +42,10 @@ import { generateRandomIdAvoidingCollisions } from './utils/generateRandomIdAvoi
 					if(active && active.extension == 'canvas') {
 						// get canvas position
 						if(!checking) {
-							this.insertx = getInsertX();
-							this.inserty = getInsertY();
+							this.insertx = await CurrentCanvasLocationX(this);
+							this.inserty = await CurrentCanvasLocationY(this);
 							// insertx is 0 if CurrentCanvasLocation returns undefined 
-							new TemplateModal(this, this.insertx, this.inserty ).open();
+							new TemplateModal(this, this.insertx, this.inserty).open();
 						}
 						return true;
 					}
@@ -81,6 +84,9 @@ import { generateRandomIdAvoidingCollisions } from './utils/generateRandomIdAvoi
 		// Parsing the contents of the files and creating a CanvasData object for each
 		const firstCanvasData: CanvasData = JSON.parse(firstContent);
 		const secondCanvasData: CanvasData = JSON.parse(secondContent);
+		plugin.insertx = await CurrentCanvasLocationX(plugin);
+		plugin.inserty = await CurrentCanvasLocationY(plugin);
+		
 		// Add location to the nodes x and y
 		for(let i = 0; i < secondCanvasData.nodes.length; i++) {
 			secondCanvasData.nodes[i].x += plugin.insertx;
@@ -88,33 +94,10 @@ import { generateRandomIdAvoidingCollisions } from './utils/generateRandomIdAvoi
 			console.log("location: " +location_x + ", " + location_y);
 		}
 		// Adjust the first CanvasData object and second CanvasData object to avoid duplicate ids
-		const updatedFirstCanvasData: CanvasData = adjustForIds(plugin ,firstCanvasData, secondCanvasData);
+		adjustForIds(plugin ,firstCanvasData, secondCanvasData);
 		// Combine the two CanvasData objects
-		const combinedCanvasData: CanvasData = combineCanvasData(updatedFirstCanvasData, secondCanvasData);
+		const combinedCanvasData: CanvasData = combineCanvasData(firstCanvasData, secondCanvasData);
 		this.app.vault.modify(firstCanvasFile, JSON.stringify(combinedCanvasData));
-	}
-
-	function getInsertX(): number {
-		let canvasView = this.app.workspace.getActiveViewOfType(ItemView);
-		if(canvasView){
-			let canvas = canvasView.canvas;
-			let canvasLocation = canvas.getCurrentCanvasLocation();
-			if(canvasLocation){
-				return canvasLocation.x;
-			}
-		}
-		return 0;
-	}
-	function getInsertY(): number {
-		let canvasView = this.app.workspace.getActiveViewOfType(ItemView);
-		if(canvasView){
-			let canvas = canvasView.canvas;
-			let canvasLocation = canvas.getCurrentCanvasLocation();
-			if(canvasLocation){
-				return canvasLocation.y;
-			}
-		}
-		return 0;
 	}
 	
 	export function combineCanvasData(firstCanvasData: CanvasData, secondCanvasData: CanvasData): CanvasData {
@@ -133,30 +116,39 @@ import { generateRandomIdAvoidingCollisions } from './utils/generateRandomIdAvoi
 	// Function to adjust the ids of the nodes and edges of the second canvas data object to avoid duplicates
 	export function adjustForIds(plugin: Plugin, firstCanvasData: CanvasData, secondCanvasData: CanvasData): CanvasData {
 		// all ids in a list 
-		const ids: string[] = [];
-		// add all ids from the first canvas data object to the list
-		for(let i = 0; i < firstCanvasData.nodes.length; i++) {
-			ids.push(firstCanvasData.nodes[i].id);
-		}
+		const ids: string[] = getListOfIds(firstCanvasData, secondCanvasData);
 
-		// push all nodes and edges ids into the list
 		firstCanvasData.nodes.forEach(node => {
 			secondCanvasData.nodes.forEach(de => {
-				if(node == de) {
-					firstCanvasData.nodes[firstCanvasData.nodes.indexOf(node)].id = generateRandomIdAvoidingCollisions(ids);
+				// if the node contains the same id in fromNode or toNode as the node in the second canvas data object
+				firstCanvasData.edges.forEach(edge => {
+					secondCanvasData.edges.forEach(ede => {
+						if(node.id == edge.fromNode && node.id == edge.fromNode) {
+							const newId = generateRandomIdAvoidingCollisions(ids);
+							ede.fromNode = newId;
+							de.id = newId;
+						}
+						if(node.id == edge.toNode && node.id == edge.toNode) {
+							const newId = generateRandomIdAvoidingCollisions(ids);
+							ede.toNode = newId;
+							de.id = newId;
+						}
+					})})
+				// if the node contains the same id as the node in the second canvas data object
+				if(node.id == de.id) {
+					node.id = generateRandomIdAvoidingCollisions(ids);
 				}else{
 				}
 			});
 		});
 		firstCanvasData.edges.forEach(edge => {
 			secondCanvasData.edges.forEach(de => {
-				if(edge == de) {
-					firstCanvasData.edges[firstCanvasData.edges.indexOf(edge)].id = generateRandomIdAvoidingCollisions(ids);
+				if(edge.id == de.id) {
+					de.id = generateRandomIdAvoidingCollisions(ids);
 				}else{
 				}
 			});
 		});
-		return firstCanvasData;
 	}
 	// function to return true of two nodes have the same type and 
 	function getCanvasFileJsonString(canvasData: CanvasData): string {

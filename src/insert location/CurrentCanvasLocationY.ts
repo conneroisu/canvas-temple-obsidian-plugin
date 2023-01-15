@@ -1,6 +1,6 @@
 import CanvasTemple from '../main';
 
-export async function CurrentCanvasLocationY(plugin: CanvasTemple) {
+export async function CurrentCanvasLocationY(plugin: CanvasTemple): Promise<number> {
 	this.plugin = plugin;
 	// get the current file 
 	const active = this.app.workspace.getActiveFile();
